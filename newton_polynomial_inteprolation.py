@@ -27,9 +27,11 @@ Please refer below for references
 
 '''
 
+from numba import jit
 import numpy as np
 
 
+@jit(cache=True, nopython=True, parallel=True)  # nopython=True for best perf
 def interpolate(I):
     I = np.double(I)
     (m, n) = I.shape
@@ -87,22 +89,22 @@ def interpolate(I):
         for j in range(3, m-4):
             pha1 = 0.0
             pha2 = 0.0
+            epsl = 0.000000000000001  # Please do not divide by zero
 
             for k in range(-2, 3, 2):
                 for l in range(-2, 3, 2):
                     pha1 = pha1 + abs(Y1[i+k, j+l] - I[i+k, j+l])
                     pha2 = pha2 + abs(Y2[i+k, j+l] - I[i+k, j+l])
 
-            if (pha1 / pha2) > thao:
+            if (pha1 / (pha2 + epsl)) > thao:
                 R[i, j, O[i+1, j+1]] = Y2[i, j]
-            elif (pha2/pha1) > thao:
+            elif (pha2 / (pha1 + epsl)) > thao:
                 R[i, j, O[i+1, j+1]] = Y1[i, j]
-            elif (((pha1/pha2) < thao) and ((pha2/pha1) < thao)):
+            elif (((pha1 / (pha2 + epsl)) < thao) and ((pha2 / (pha1 + epsl)) < thao)):
                 d1 = abs(I[i-1, j-1] - I[i+1, j+1]) + \
                     abs(2*I[i, j] - I[i-2, j-2] - I[i+2, j+2])
                 d2 = abs(I[i+1, j-1] - I[i-1, j+1]) + \
                     abs(2*I[i, j] - I[i+2, j-2] - I[i-2, j+2])
-                epsl = 0.000000000000001
                 w1 = 1/(d1 + epsl)
                 w2 = 1/(d2+epsl)
                 R[i, j, O[i+1, j+1]] = (w1*Y1[i, j] + w2*Y2[i, j])/(w1 + w2)
@@ -138,49 +140,49 @@ def interpolate(I):
         for j in range(3, n-4):
             pha1 = 0.0
             pha2 = 0.0
+            epsl = 0.000000000000001  # Please do not divide by zero
 
             for k in range(-2, 3, 2):
                 for l in range(-2, 3, 2):
                     pha1 = pha1 + abs(XX1[i+k, j+l] - I[i+k, j+l])
                     pha2 = pha2 + abs(XX2[i+k, j+l] - I[i+k, j+l])
 
-            if (pha1 / pha2) > thao:
+            if (pha1 / (pha2 + epsl)) > thao:
                 R[i, j, O[i, j+1]] = XX2[i, j]
-            elif (pha2/pha1) > thao:
+            elif (pha2 / (pha1 + epsl)) > thao:
                 R[i, j, O[i, j+1]] = XX1[i, j]
-            elif (((pha1/pha2) < thao) and ((pha2/pha1) < thao)):
+            elif (((pha1 / (pha2 + epsl)) < thao) and ((pha2 / (pha1 + epsl)) < thao)):
                 d1 = abs(I[i, j-1] - I[i, j+1]) + \
                     abs(2*I[i, j] - I[i, j-2] - I[i, j+2])
                 d2 = abs(I[i+1, j] - I[i-1, j]) + \
                     abs(2*I[i, j] - I[i+2, j] - I[i-2, j])
-                epsl = 0.000000000000001
                 w1 = 1/(d1 + epsl)
                 w2 = 1/(d2 + epsl)
                 R[i, j, O[i, j+1]] = (w1*XX1[i, j] + w2*XX2[i, j])/(w1 + w2)
 
             pha1 = 0.0
             pha2 = 0.0
+            epsl = 0.000000000000001  # Please do not divide by zero
 
             for k in range(-2, 3, 2):
                 for l in range(-2, 3, 2):
                     pha1 = pha1 + abs(YY1[i+k, j+l] - I[i+k, j+l])
                     pha2 = pha2 + abs(YY2[i+k, j+l] - I[i+k, j+l])
 
-            if (pha1 / pha2) > thao:
+            if (pha1 / (pha2 + epsl)) > thao:
                 R[i, j, O[i+1, j]] = YY2[i, j]
-            elif (pha2/pha1) > thao:
+            elif (pha2 / (pha1 + epsl)) > thao:
                 R[i, j, O[i+1, j]] = YY1[i, j]
-            elif (((pha1/pha2) < thao) and ((pha2/pha1) < thao)):
+            elif (((pha1 / (pha2 + epsl)) < thao) and ((pha2 / (pha1 + epsl)) < thao)):
                 d1 = abs(I[i, j-1] - I[i, j+1]) + \
                     abs(2*I[i, j] - I[i, j-2] - I[i, j+2])
                 d2 = abs(I[i+1, j] - I[i-1, j]) + \
                     abs(2*I[i, j] - I[i+2, j] - I[i-2, j])
-                epsl = 0.000000000000001
                 w1 = 1/(d1 + epsl)
                 w2 = 1/(d2 + epsl)
                 R[i, j, O[i, j+1]] = (w1*YY1[i, j] + w2*YY2[i, j])/(w1 + w2)
 
-    R = RR
+    # R = RR  # WHY ?! so we compute Stage2 interpolation but not return it..
     I0 = R[:, :, 0]
     I45 = R[:, :, 1]
     I90 = R[:, :, 2]
